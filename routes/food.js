@@ -2,7 +2,9 @@
 const express = require('express');
 const router = express.Router();
 const externalApis = require('../services/externalApis');
+
 const gemini = require('../services/gemini');
+const supabase = require('../services/supabase');
 
 // 1. Search Restaurants with AI Recommendations
 router.post('/search', async (req, res) => {
@@ -120,6 +122,75 @@ router.post('/menu-recommend', async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Menu recommendation failed" });
+  }
+});
+
+
+// 6. Save Favorite Restaurant
+router.post('/favorites', async (req, res) => {
+  const { user_id, restaurant_id, name, cuisine } = req.body;
+  try {
+    const { data, error } = await supabase
+      .from('favorite_restaurants')
+      .insert([{ user_id, restaurant_id, name, cuisine }])
+      .select();
+      
+    if (error) throw error;
+    res.json({ message: "Restaurant saved to favorites", data });
+  } catch (error) {
+    console.error("Supabase Error:", error);
+    res.status(500).json({ error: "Failed to save favorite" });
+  }
+});
+
+// 7. Get User Favorites
+router.get('/favorites/:userId', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const { data, error } = await supabase
+      .from('favorite_restaurants')
+      .select('*')
+      .eq('user_id', userId);
+      
+    if (error) throw error;
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch favorites" });
+  }
+});
+
+// 8. Save Dietary Preferences
+router.post('/preferences', async (req, res) => {
+  const { user_id, diet_type, allergies } = req.body;
+  try {
+    // Upsert mechanism (update if exists, insert if new)
+    const { data, error } = await supabase
+      .from('dietary_preferences')
+      .upsert([{ user_id, diet_type, allergies }], { onConflict: 'user_id' })
+      .select();
+
+    if (error) throw error;
+    res.json({ message: "Preferences saved", data });
+  } catch (error) {
+    console.error("Supabase Error:", error);
+    res.status(500).json({ error: "Failed to save preferences" });
+  }
+});
+
+// 9. Get User Preferences
+router.get('/preferences/:userId', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const { data, error } = await supabase
+      .from('dietary_preferences')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+      
+    if (error && error.code !== 'PGRST116') throw error; // Ignore not found error
+    res.json(data || {});
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch preferences" });
   }
 });
 
