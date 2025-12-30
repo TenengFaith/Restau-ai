@@ -6,6 +6,17 @@ const externalApis = require('../services/externalApis');
 const gemini = require('../services/gemini');
 const supabase = require('../services/supabase');
 
+// 0. Health Check
+router.get('/health', async (req, res) => {
+  res.json({
+    status: 'ok',
+    gemini_model: "gemini-2.0-flash",
+    gemini_key_present: !!process.env.GEMINI_API_KEY,
+    serp_key_present: !!process.env.SERP_API_KEY,
+    supabase_url_present: !!process.env.SUPABASE_URL
+  });
+});
+
 // 1. Search Restaurants with AI Recommendations
 router.post('/search', async (req, res) => {
   try {
