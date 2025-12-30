@@ -13,6 +13,10 @@ app.get("/", (req, res) => {
   res.json({ message: "API is running!" });
 });
 
+app.get("/api/test", (req, res) => {
+  res.json({ message: "API /api is working!" });
+});
+
 // Import routes here
 const foodRoutes = require('./routes/food');
 const socialRoutes = require('./routes/social');
