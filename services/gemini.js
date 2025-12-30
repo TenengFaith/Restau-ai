@@ -8,6 +8,25 @@ const model = genAI.getGenerativeModel({
   generationConfig: { responseMimeType: "application/json" }
 });
 
+const findJsonBlock = (text) => {
+  try {
+    const jsonStart = text.indexOf('[');
+    const jsonEnd = text.lastIndexOf(']');
+    if (jsonStart !== -1 && jsonEnd !== -1) {
+      return JSON.parse(text.slice(jsonStart, jsonEnd + 1));
+    }
+    const objStart = text.indexOf('{');
+    const objEnd = text.lastIndexOf('}');
+    if (objStart !== -1 && objEnd !== -1) {
+      return JSON.parse(text.slice(objStart, objEnd + 1));
+    }
+    return JSON.parse(text);
+  } catch (e) {
+    console.error("JSON Parse Error:", e.message, "Text:", text);
+    return null;
+  }
+};
+
 const analyzeRestaurantsForSafety = async (restaurants, userProfile) => {
   const prompt = `
     User Profile:
@@ -16,26 +35,25 @@ const analyzeRestaurantsForSafety = async (restaurants, userProfile) => {
     
     Task: Analyze these restaurants and identify the TOP 3 SAFEST options.
     For each, provide a detailed safety breakdown and vibe check.
-    If 'menu_link' is available, assume typical dishes for that cuisine.
     
     Restaurants Data:
     ${JSON.stringify(restaurants.slice(0, 10))}
     
-    Output JSON format:
+    Output JSON format (Array of objects):
     [
       {
-        "index": 0, // IMPORTANT: The index of the restaurant in the input array
+        "index": 0,
         "restaurant_name": "Name",
-        "safety_score": 1-10,
+        "safety_score": 10,
         "safety_breakdown": {
-          "allergen_risk": "Low/Medium/High",
-          "cross_contamination_risk": "Low/Medium/High",
-          "explanation": "Why..."
+          "allergen_risk": "Low",
+          "cross_contamination_risk": "Low",
+          "explanation": "Explanation here..."
         },
-        "vibe": "Short description of atmosphere (e.g., Cozy, upscale, lively)",
-        "best_for": "Occasion (e.g., Date Night, Quick Lunch)",
-        "reasoning": "General explanation...",
-        "suggested_dishes": ["Dish 1", "Dish 2"]
+        "vibe": "Vibe description",
+        "best_for": "Occasion",
+        "reasoning": "Reason here",
+        "suggested_dishes": ["Dish 1"]
       }
     ]
   `;
@@ -44,10 +62,9 @@ const analyzeRestaurantsForSafety = async (restaurants, userProfile) => {
     const result = await model.generateContent(prompt);
     const response = await result.response;
     let text = response.text();
-    text = text.replace(/```json/g, '').replace(/```/g, '').trim();
-    return JSON.parse(text);
+    return findJsonBlock(text) || [];
   } catch (err) {
-    console.error("Gemini AI Error:", err.message);
+    console.error("Gemini AI Error (Safety):", err.message);
     return [];
   }
 };
@@ -72,8 +89,8 @@ const summarizeReviews = async (reviews, restaurantName) => {
   
   try {
     const result = await model.generateContent(prompt);
-    const text = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
-    return JSON.parse(text);
+    const text = result.response.text();
+    return findJsonBlock(text) || { error: "Failed to summarize" };
   } catch (err) {
     console.error("Gemini AI Error (Reviews):", err.message);
     return { error: "Failed to summarize" };
@@ -98,8 +115,8 @@ const assessValue = async (restaurant, reviews) => {
   `;
      try {
     const result = await model.generateContent(prompt);
-    const text = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
-    return JSON.parse(text);
+    const text = result.response.text();
+    return findJsonBlock(text) || { error: "Failed to assess value" };
   } catch (err) {
     return { error: "Failed to assess value" };
   }
@@ -124,8 +141,8 @@ const recommendMenu = async (menuItems, preferences, budget) => {
     `;
     try {
         const result = await model.generateContent(prompt);
-        const text = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
-        return JSON.parse(text);
+        const text = result.response.text();
+        return findJsonBlock(text) || { error: "Failed to recommend" };
       } catch (err) {
         return { error: "Failed to recommend" };
       }
@@ -150,8 +167,8 @@ const findHiddenGems = async (restaurants, location) => {
     `;
     try {
         const result = await model.generateContent(prompt);
-        const text = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
-        return JSON.parse(text);
+        const text = result.response.text();
+        return findJsonBlock(text) || [];
       } catch (err) {
         return [];
       }

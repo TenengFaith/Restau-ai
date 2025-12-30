@@ -34,15 +34,23 @@ router.post('/search', async (req, res) => {
     
     // Merge AI results with source data using indices
     const results = aiAnalysis.map(aiResult => {
-      // Use the index property returned by Gemini, fallback to first item if missing just in case
-      const sourceIndex = typeof aiResult.index !== 'undefined' ? aiResult.index : -1;
-      const source = restaurants[sourceIndex];
+      const sourceIndex = typeof aiResult.index !== 'undefined' ? Number(aiResult.index) : -1;
+      let source = restaurants[sourceIndex];
+      
+      // Fallback: If index is invalid, try name matching
+      if (!source && aiResult.restaurant_name) {
+        source = restaurants.find(r => 
+          r.name.toLowerCase().includes(aiResult.restaurant_name.toLowerCase()) ||
+          aiResult.restaurant_name.toLowerCase().includes(r.name.toLowerCase())
+        );
+      }
+
       return {
         ...(source || {}),
         ...aiResult,
         name: source ? source.name : aiResult.restaurant_name
       };
-    }).filter(item => item.name); // Final sanity check to ensure we have valid data
+    }).filter(item => item.name);
     
     res.json({
       results,
@@ -120,8 +128,17 @@ router.get('/hidden-gems/:location', async (req, res) => {
     
     // Merge AI results with source data using indices
     const results = gems.map(gem => {
-      const sourceIndex = typeof gem.index !== 'undefined' ? gem.index : -1;
-      const source = restaurants[sourceIndex];
+      const sourceIndex = typeof gem.index !== 'undefined' ? Number(gem.index) : -1;
+      let source = restaurants[sourceIndex];
+
+      // Fallback: Name matching
+      if (!source && gem.name) {
+        source = restaurants.find(r => 
+          r.name.toLowerCase().includes(gem.name.toLowerCase()) ||
+          gem.name.toLowerCase().includes(r.name.toLowerCase())
+        );
+      }
+
       return {
         ...(source || {}),
         ...gem,
