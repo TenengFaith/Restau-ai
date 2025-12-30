@@ -14,7 +14,11 @@ app.get("/", (req, res) => {
 });
 
 // Import routes here
-app.use('/api/food', require('./routes/food'));
+const foodRoutes = require('./routes/food');
+const socialRoutes = require('./routes/social');
+
+app.use('/api/food', foodRoutes);
+app.use('/api/social', socialRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

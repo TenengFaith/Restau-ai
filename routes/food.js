@@ -32,8 +32,20 @@ router.post('/search', async (req, res) => {
     
     const aiAnalysis = await gemini.analyzeRestaurantsForSafety(restaurants, userProfile);
     
+    // Merge AI results with source data using indices
+    const results = aiAnalysis.map(aiResult => {
+      // Use the index property returned by Gemini, fallback to first item if missing just in case
+      const sourceIndex = typeof aiResult.index !== 'undefined' ? aiResult.index : -1;
+      const source = restaurants[sourceIndex];
+      return {
+        ...(source || {}),
+        ...aiResult,
+        name: source ? source.name : aiResult.restaurant_name
+      };
+    }).filter(item => item.name); // Final sanity check to ensure we have valid data
+    
     res.json({
-      results: aiAnalysis,
+      results,
       source_data_count: restaurants.length
     });
   } catch (error) {
@@ -105,7 +117,19 @@ router.get('/hidden-gems/:location', async (req, res) => {
     // We let AI decide "hidden gem" status from the list
     
     const gems = await gemini.findHiddenGems(restaurants, location);
-    res.json(gems);
+    
+    // Merge AI results with source data using indices
+    const results = gems.map(gem => {
+      const sourceIndex = typeof gem.index !== 'undefined' ? gem.index : -1;
+      const source = restaurants[sourceIndex];
+      return {
+        ...(source || {}),
+        ...gem,
+        name: source ? source.name : gem.name
+      };
+    }).filter(item => item.name);
+    
+    res.json(results);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Hidden gem search failed" });

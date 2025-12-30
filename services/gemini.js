@@ -15,18 +15,26 @@ const analyzeRestaurantsForSafety = async (restaurants, userProfile) => {
     - Allergies: ${JSON.stringify(userProfile.allergies || [])}
     
     Task: Analyze these restaurants and identify the TOP 3 SAFEST options.
-    For each, explain WHY it is safe or suitable based on the name, description, and cuisine.
+    For each, provide a detailed safety breakdown and vibe check.
     If 'menu_link' is available, assume typical dishes for that cuisine.
     
     Restaurants Data:
-    ${JSON.stringify(restaurants.slice(0, 10))} // Limit to 10 to fit context if needed
+    ${JSON.stringify(restaurants.slice(0, 10))}
     
     Output JSON format:
     [
       {
+        "index": 0, // IMPORTANT: The index of the restaurant in the input array
         "restaurant_name": "Name",
         "safety_score": 1-10,
-        "reasoning": "Explanation...",
+        "safety_breakdown": {
+          "allergen_risk": "Low/Medium/High",
+          "cross_contamination_risk": "Low/Medium/High",
+          "explanation": "Why..."
+        },
+        "vibe": "Short description of atmosphere (e.g., Cozy, upscale, lively)",
+        "best_for": "Occasion (e.g., Date Night, Quick Lunch)",
+        "reasoning": "General explanation...",
         "suggested_dishes": ["Dish 1", "Dish 2"]
       }
     ]
@@ -36,7 +44,6 @@ const analyzeRestaurantsForSafety = async (restaurants, userProfile) => {
     const result = await model.generateContent(prompt);
     const response = await result.response;
     let text = response.text();
-    // Clean code blocks if present
     text = text.replace(/```json/g, '').replace(/```/g, '').trim();
     return JSON.parse(text);
   } catch (err) {
@@ -50,13 +57,16 @@ const summarizeReviews = async (reviews, restaurantName) => {
     Restaurant: ${restaurantName}
     Reviews: ${JSON.stringify(reviews)}
     
-    Task: Summarize these reviews.
+    Task: Summarize these reviews into a detailed insight report.
     Output JSON format:
     {
-      "pros": ["Pro 1 (count)", "Pro 2 (count)", "Pro 3 (count)"],
-      "cons": ["Con 1 (count)", "Con 2 (count)", "Con 3 (count)"],
-      "best_dishes": ["Dish 1", "Dish 2", "Dish 3"],
-      "avoid": ["Item 1", "Item 2"]
+      "pros": ["Pro 1", "Pro 2"],
+      "cons": ["Con 1", "Con 2"],
+      "vibe_check": "What are people saying about the atmosphere?",
+      "service_rating": "Good/Bad/Mixed",
+      "best_dishes": ["Dish 1", "Dish 2"],
+      "avoid": ["Item 1"],
+      "note": "Overall summary note"
     }
   `;
   
@@ -77,10 +87,11 @@ const assessValue = async (restaurant, reviews) => {
     Rating: ${restaurant.rating}
     Reviews Sample: ${JSON.stringify(reviews.slice(0, 5))}
     
-    Task: Assess value for money.
+    Task: Assess value for money and price prediction.
     Output JSON:
     {
       "verdict": "Good/Bad Value",
+      "estimated_price_per_person": "e.g., $15-$25",
       "explanation": "Why...",
       "best_for": "Who is this for?"
     }
@@ -107,6 +118,7 @@ const recommendMenu = async (menuItems, preferences, budget) => {
       "main": "Item",
       "dessert": "Item",
       "total_price": "Estimated",
+      "nutrition_note": "Brief health comment",
       "reasoning": "Why this combo?"
     }
     `;
@@ -120,7 +132,6 @@ const recommendMenu = async (menuItems, preferences, budget) => {
 };
 
 const findHiddenGems = async (restaurants, location) => {
-    // Filter logic might happen before, but AI can refine
     const prompt = `
     Location: ${location}
     Candidates: ${JSON.stringify(restaurants)}
@@ -129,7 +140,12 @@ const findHiddenGems = async (restaurants, location) => {
     Pick top 5.
     Output JSON:
     [
-        { "name": "Name", "gem_factor": "Why it's a gem" }
+        { 
+          "index": 0, // The index of the restaurant in the input array
+          "name": "Name", 
+          "gem_factor": "Why it's a gem",
+          "vibe": "Quick atmosphere check"
+        }
     ]
     `;
     try {
