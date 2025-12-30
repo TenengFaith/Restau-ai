@@ -235,4 +235,22 @@ router.get('/preferences/:userId', async (req, res) => {
   }
 });
 
+// 10. Delete Favorite Restaurant
+router.delete('/favorites/:userId/:restaurantId', async (req, res) => {
+  const { userId, restaurantId } = req.params;
+  try {
+    const { error } = await supabase
+      .from('favorite_restaurants')
+      .delete()
+      .eq('user_id', userId)
+      .eq('restaurant_id', restaurantId);
+
+    if (error) throw error;
+    res.json({ message: "Favorite removed" });
+  } catch (error) {
+    console.error("Supabase Error:", error);
+    res.status(500).json({ error: "Failed to delete favorite" });
+  }
+});
+
 module.exports = router;
