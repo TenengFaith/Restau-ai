@@ -4,7 +4,7 @@ require("dotenv").config();
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ 
-  model: "gemini-flash-latest",
+  model: "gemini-2.5-flash",
   generationConfig: { responseMimeType: "application/json" }
 });
 
@@ -64,7 +64,11 @@ const analyzeRestaurantsForSafety = async (restaurants, userProfile) => {
     let text = response.text();
     return findJsonBlock(text) || [];
   } catch (err) {
-    console.error("Gemini AI Error (Safety):", err.message);
+    if (err.message?.includes('429')) {
+      console.error("Gemini Quota Exceeded (429). Please wait before searching again.");
+    } else {
+      console.error("Gemini AI Error (Safety):", err.message);
+    }
     return [];
   }
 };
@@ -92,8 +96,12 @@ const summarizeReviews = async (reviews, restaurantName) => {
     const text = result.response.text();
     return findJsonBlock(text) || { error: "Failed to summarize" };
   } catch (err) {
-    console.error("Gemini AI Error (Reviews):", err.message);
-    return { error: "Failed to summarize" };
+    if (err.message?.includes('429')) {
+      console.error("Gemini Quota Exceeded (429) for Reviews.");
+    } else {
+      console.error("Gemini AI Error (Reviews):", err.message);
+    }
+    return { error: "Failed to summarize (AI Quota)" };
   }
 };
 
@@ -113,12 +121,17 @@ const assessValue = async (restaurant, reviews) => {
       "best_for": "Who is this for?"
     }
   `;
-     try {
+  try {
     const result = await model.generateContent(prompt);
     const text = result.response.text();
     return findJsonBlock(text) || { error: "Failed to assess value" };
   } catch (err) {
-    return { error: "Failed to assess value" };
+    if (err.message?.includes('429')) {
+      console.error("Gemini Quota Exceeded (429) for Value Analysis.");
+    } else {
+      console.error("Gemini AI Error (Value):", err.message);
+    }
+    return { error: "Failed to assess value (AI Quota)" };
   }
 };
 
@@ -144,7 +157,12 @@ const recommendMenu = async (menuItems, preferences, budget) => {
         const text = result.response.text();
         return findJsonBlock(text) || { error: "Failed to recommend" };
       } catch (err) {
-        return { error: "Failed to recommend" };
+        if (err.message?.includes('429')) {
+          console.error("Gemini Quota Exceeded (429) for Menu Recommendations.");
+        } else {
+          console.error("Gemini AI Error (Menu):", err.message);
+        }
+        return { error: "Failed to recommend (AI Quota)" };
       }
 };
 
@@ -170,6 +188,11 @@ const findHiddenGems = async (restaurants, location) => {
         const text = result.response.text();
         return findJsonBlock(text) || [];
       } catch (err) {
+        if (err.message?.includes('429')) {
+          console.error("Gemini Quota Exceeded (429) for Hidden Gems.");
+        } else {
+          console.error("Gemini AI Error (Gems):", err.message);
+        }
         return [];
       }
 };
